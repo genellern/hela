@@ -2,9 +2,14 @@ package migrator
 
 import (
     "errors"
+    "fmt"
+    "github.com/genellern/hela/cmd/utils"
     "os"
     "path/filepath"
     "runtime"
+    "strings"
+    "text/template"
+    "time"
 )
 
 type Config struct {
@@ -30,6 +35,50 @@ func init() {
     }
 }
 
+func CreateMigration(config Config, args []string) error {
+    name := utils.ToSnakeCase(args[0])
+    println("Creating migrations...")
+    println(name)
+
+    migrationCmd := strings.Split(name, "_")[0]
+
+    switch migrationCmd {
+    case "init":
+    case "create":
+        {
+            args = append(args[1:])
+            createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args)
+
+        }
+    }
+
+    return nil
+}
+
+func createMigrationFile(config Config, name string, args []string) {
+    t, err := template.ParseFiles(config.DestinationPath + "/create-migration.tmpl")
+
+    if err != nil {
+        panic(err)
+    }
+
+    file, err := os.Create(fmt.Sprintf(
+        "%s/%d_%s.go",
+        config.DestinationPath,
+        time.Now().Unix(),
+        name,
+    ))
+    println("Filename >> ", filepath.Base(file.Name()))
+    defer file.Close()
+
+    err = t.Execute(file, nil)
+    if err != nil {
+        panic(err)
+    }
+
+    println("Created migration file")
+}
+
 func InitMigrations(config Config) error {
 
     err := initFolders(config)
@@ -42,8 +91,8 @@ func InitMigrations(config Config) error {
     if err != nil {
         println(err.Error())
     }
-    return err
 
+    return err
 }
 
 func initFolders(config Config) error {

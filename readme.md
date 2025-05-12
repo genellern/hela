@@ -13,3 +13,8 @@ $config.DestinationPath = "/home/gene/GolandProjects/permitto/database/migration
 
 err := migrator.InitMigrations(config)
 ```
+
+## Create migrations like
+```
+err = migrator.CreateMigration(config, []string{"CreateAcos"})
+```

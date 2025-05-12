@@ -20,11 +20,10 @@ var CommandOptions = make(map[string]interface{})
 
 // Call with os.Args ?
 func init() {
-    var config Config
     // todo create Config from context or environment
-    CommandOptions["init"] = func(args []string) error {
-        return InitMigrations(config)
-    }
+    //CommandOptions["init"] = func(args []string) error {
+    //    return InitMigrations(config)
+    //}
     CommandOptions["create"] = func(args []string) error {
         if len(args) < 2 {
             err := errors.New("Missing migration name")
@@ -37,29 +36,27 @@ func init() {
 
 func CreateMigration(config Config, args []string) error {
     name := utils.ToSnakeCase(args[0])
-    println("Creating migrations...")
-    println(name)
 
     migrationCmd := strings.Split(name, "_")[0]
 
     switch migrationCmd {
     case "init":
+        return InitMigrations(config)
     case "create":
         {
             args = append(args[1:])
-            createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args)
-
+            return createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args)
         }
     }
 
     return nil
 }
 
-func createMigrationFile(config Config, name string, args []string) {
+func createMigrationFile(config Config, name string, args []string) error {
     t, err := template.ParseFiles(config.DestinationPath + "/create-migration.tmpl")
 
     if err != nil {
-        panic(err)
+        return err
     }
 
     file, err := os.Create(fmt.Sprintf(
@@ -68,15 +65,17 @@ func createMigrationFile(config Config, name string, args []string) {
         time.Now().Unix(),
         name,
     ))
-    println("Filename >> ", filepath.Base(file.Name()))
     defer file.Close()
 
-    err = t.Execute(file, nil)
+    err = t.Execute(file, args)
     if err != nil {
-        panic(err)
+        println("Couldn't create migration file >> ", filepath.Base(file.Name()))
+        println(err.Error())
+        return err
     }
 
-    println("Created migration file")
+    println("Created migration file >> ", filepath.Base(file.Name()))
+    return nil
 }
 
 func InitMigrations(config Config) error {
@@ -97,10 +96,8 @@ func InitMigrations(config Config) error {
 
 func initFolders(config Config) error {
 
-    err := os.MkdirAll(config.DestinationPath, os.ModePerm)
     println("Creating folder", config.DestinationPath)
-
-    return err
+    return os.MkdirAll(config.DestinationPath, os.ModePerm)
 }
 
 func initTemplates(config Config) error {
@@ -108,10 +105,8 @@ func initTemplates(config Config) error {
     path, _ := filepath.Abs(filepath.Dir(file) + "./../../resources/templates")
     println("Copying files", path)
 
-    err := os.CopyFS(
+    return os.CopyFS(
         config.DestinationPath,
         os.DirFS(path),
     )
-
-    return err
 }

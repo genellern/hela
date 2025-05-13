@@ -12,8 +12,48 @@ import (
     "time"
 )
 
+type Action string
+
+const (
+    Create Action = "create"
+    Alter  Action = "update"
+    Drop   Action = "drop"
+)
+
+type Dialect string
+
+const (
+    MySQL Dialect = "MySQL"
+)
+
 type Config struct {
     DestinationPath string
+    Dialect         Dialect
+}
+
+type MigrationOptions struct {
+    Table       string
+    PackageName string
+    Fields      []string
+    action      Action
+}
+
+type MigrationInterface interface {
+    Action() Action
+    GetFields() []string
+    TableName() string
+}
+
+func (m MigrationOptions) Action() Action {
+    return m.action
+}
+
+func (m MigrationOptions) GetFields() []string {
+    return m.Fields
+}
+
+func (m MigrationOptions) TableName() string {
+    return m.Table
 }
 
 var CommandOptions = make(map[string]interface{})
@@ -40,12 +80,9 @@ func CreateMigration(config Config, args []string) error {
     migrationCmd := strings.Split(name, "_")[0]
 
     switch migrationCmd {
-    case "init":
-        return InitMigrations(config)
     case "create":
         {
-            args = append(args[1:])
-            return createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args)
+            return createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args[1:])
         }
     }
 
@@ -65,9 +102,16 @@ func createMigrationFile(config Config, name string, args []string) error {
         time.Now().Unix(),
         name,
     ))
+    println(filepath.Abs(file.Name()))
     defer file.Close()
 
-    err = t.Execute(file, args)
+    var data MigrationOptions
+    data.Table = name
+    data.PackageName = "migrations"
+    data.Fields = args
+    data.action = Create
+
+    err = t.Execute(file, data)
     if err != nil {
         println("Couldn't create migration file >> ", filepath.Base(file.Name()))
         println(err.Error())

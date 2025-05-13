@@ -1,6 +1,16 @@
-package {{ package }}
+package {{ .PackageName }}
 
-func Run() {
-    
-    // TODO write migration boilerplate code
+import("github.com/genellern/hela/cmd/migrator")
+
+func Run() migrator.MigrationInterface {
+    var migration migrator.MigrationOptions
+
+    migration.Table = "{{ .Table() }}"
+    migration.PackageName = "{{ .PackageName }}"
+
+    {{ range .Fields }}
+    migration.Fields = append("{{ . }}", migration.fields)
+    {{ end }}
+
+    return migration
 }

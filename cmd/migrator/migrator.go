@@ -12,19 +12,53 @@ import (
     "time"
 )
 
+type Action string
+
+const (
+    Create Action = "create"
+    Alter  Action = "update"
+    Drop   Action = "drop"
+)
+
+type Dialect string
+
+const (
+    MySQL Dialect = "MySQL"
+)
+
 type Config struct {
     DestinationPath string
+    Dialect         Dialect
+}
+
+type MigrationOptions struct {
+    Table       string
+    PackageName string
+    Fields      []string
+    Action      Action
+}
+
+type MigrationInterface interface {
+    GetFields() []string
+    TableName() string
+}
+
+func (m MigrationOptions) GetFields() []string {
+    return m.Fields
+}
+
+func (m MigrationOptions) TableName() string {
+    return m.Table
 }
 
 var CommandOptions = make(map[string]interface{})
 
 // Call with os.Args ?
 func init() {
-    var config Config
     // todo create Config from context or environment
-    CommandOptions["init"] = func(args []string) error {
-        return InitMigrations(config)
-    }
+    //CommandOptions["init"] = func(args []string) error {
+    //    return InitMigrations(config)
+    //}
     CommandOptions["create"] = func(args []string) error {
         if len(args) < 2 {
             err := errors.New("Missing migration name")
@@ -37,29 +71,24 @@ func init() {
 
 func CreateMigration(config Config, args []string) error {
     name := utils.ToSnakeCase(args[0])
-    println("Creating migrations...")
-    println(name)
 
     migrationCmd := strings.Split(name, "_")[0]
 
     switch migrationCmd {
-    case "init":
     case "create":
         {
-            args = append(args[1:])
-            createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args)
-
+            return createMigrationFile(config, strings.Replace(name, "Create_", "", 9), args[1:])
         }
     }
 
     return nil
 }
 
-func createMigrationFile(config Config, name string, args []string) {
+func createMigrationFile(config Config, name string, args []string) error {
     t, err := template.ParseFiles(config.DestinationPath + "/create-migration.tmpl")
 
     if err != nil {
-        panic(err)
+        return err
     }
 
     file, err := os.Create(fmt.Sprintf(
@@ -68,15 +97,24 @@ func createMigrationFile(config Config, name string, args []string) {
         time.Now().Unix(),
         name,
     ))
-    println("Filename >> ", filepath.Base(file.Name()))
+    println(filepath.Abs(file.Name()))
     defer file.Close()
 
-    err = t.Execute(file, nil)
+    var data MigrationOptions
+    data.Table = name
+    data.PackageName = "migrations"
+    data.Fields = args
+    data.Action = Create
+
+    err = t.Execute(file, data)
     if err != nil {
-        panic(err)
+        println("Couldn't create migration file >> ", filepath.Base(file.Name()))
+        println(err.Error())
+        return err
     }
 
-    println("Created migration file")
+    println("Created migration file >> ", filepath.Base(file.Name()))
+    return nil
 }
 
 func InitMigrations(config Config) error {
@@ -97,10 +135,8 @@ func InitMigrations(config Config) error {
 
 func initFolders(config Config) error {
 
-    err := os.MkdirAll(config.DestinationPath, os.ModePerm)
     println("Creating folder", config.DestinationPath)
-
-    return err
+    return os.MkdirAll(config.DestinationPath, os.ModePerm)
 }
 
 func initTemplates(config Config) error {
@@ -108,10 +144,8 @@ func initTemplates(config Config) error {
     path, _ := filepath.Abs(filepath.Dir(file) + "./../../resources/templates")
     println("Copying files", path)
 
-    err := os.CopyFS(
+    return os.CopyFS(
         config.DestinationPath,
         os.DirFS(path),
     )
-
-    return err
 }

@@ -35,17 +35,12 @@ type MigrationOptions struct {
     Table       string
     PackageName string
     Fields      []string
-    action      Action
+    Action      Action
 }
 
 type MigrationInterface interface {
-    Action() Action
     GetFields() []string
     TableName() string
-}
-
-func (m MigrationOptions) Action() Action {
-    return m.action
 }
 
 func (m MigrationOptions) GetFields() []string {
@@ -109,7 +104,7 @@ func createMigrationFile(config Config, name string, args []string) error {
     data.Table = name
     data.PackageName = "migrations"
     data.Fields = args
-    data.action = Create
+    data.Action = Create
 
     err = t.Execute(file, data)
     if err != nil {

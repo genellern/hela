@@ -1,5 +1,8 @@
 package migrator
 
+import (
+    "database/sql"
+)
 type Action string
 
 const (
@@ -14,9 +17,20 @@ const (
     MySQL Dialect = "MySQL"
 )
 
+type Connection struct {
+    Dialect Dialect
+    DSN     string
+    conn    *sql.DB
+}
+
+type ConnectionInterface interface {
+    Open() error
+    Close() error
+}
+
 type Config struct {
     DestinationPath string
-    Dialect         Dialect
+    Conn            ConnectionInterface
 }
 
 type MigrationOptions struct {
@@ -33,8 +47,18 @@ type MigrationInterface interface {
 
 func (m MigrationOptions) GetFields() []string {
     return m.Fields
+
+// Connection
+
+func (c *Connection) Open() error {
+    db, err := sql.Open(string(c.Dialect), c.DSN)
+    if err != nil {
+        panic(err)
+    }
+    c.conn = db
+    return nil
 }
 
-func (m MigrationOptions) TableName() string {
-    return m.Table
+func (c *Connection) Close() error {
+    return c.conn.Close()
 }

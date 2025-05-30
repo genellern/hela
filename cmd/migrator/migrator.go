@@ -3,7 +3,11 @@ package migrator
 import (
     "database/sql"
 )
+
 type Action string
+type Number interface {
+    ~int | ~int64 | ~float32 | ~float64 | ~uint
+}
 
 const (
     Create Action = "create"
@@ -34,19 +38,51 @@ type Config struct {
 }
 
 type MigrationOptions struct {
+    Version     Number
     Table       string
     PackageName string
     Fields      []string
     Action      Action
+    Raw         string
 }
+
+type MigrationCallback func() MigrationOptions
+type MigrationsStack []MigrationCallback
 
 type MigrationInterface interface {
     GetFields() []string
     TableName() string
 }
 
-func (m MigrationOptions) GetFields() []string {
-    return m.Fields
+//
+func (m *MigrationOptions) New(table string, fields []string, action Action, version Number) *MigrationOptions {
+    m.Table = table
+    m.Version = version
+    m.Fields = fields
+    m.Action = action
+
+    return m
+}
+
+func (m *MigrationsStack) Migrate() error {
+
+    var err error
+    for _, callback := range *m {
+        options := callback()
+        err = processMigration(options)
+
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
+func processMigration(options MigrationOptions) error {
+
+    return nil
+}
 
 // Connection
 

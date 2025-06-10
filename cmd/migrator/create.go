@@ -52,6 +52,7 @@ func parseTemplate(config Config, file *os.File, name string, args []string) err
     }
     var data MigrationOptions
     data.Table = name
+    data.Name = string(Create) + "_" + name
     data.PackageName = "migrations"
     data.Fields = args
     data.Action = Create
@@ -65,5 +66,4 @@ func parseTemplate(config Config, file *os.File, name string, args []string) err
 
     println("Created migration file >> ", filepath.Base(file.Name()))
     return nil
-
 }

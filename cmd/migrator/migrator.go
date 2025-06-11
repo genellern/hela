@@ -162,6 +162,15 @@ func processMigration(options MigrationOptions) error {
         err = createTable(options.Table, options.Raw, fields)
     }
 
+    if err != nil {
+        return err
+    }
+    if done, err := options.markDone(); done || err != nil {
+        if !done {
+            err = errors.New("Didn't mark the migration as done> " + options.Name)
+        }
+    }
+
     return err
 }
 
@@ -221,6 +230,27 @@ func (c *Connection) Exec(queryStr string, args ...any) (sql.Result, error) {
 func (c *Connection) Query(queryStr string, args []interface{}) (*sql.Rows, error) {
     fmt.Println("Query> " + queryStr)
     return c.conn.Query(queryStr, args...)
+}
+
+func (m *MigrationOptions) markDone() (bool, error) {
+
+    _, err := connection.Exec(
+        fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES"+"(%s, %s, %s)",
+            "migrations",
+            "migration_name",
+            "version",
+            "migration_on",
+            m.Name,
+            m.Version,
+            time.Now().Format("2006-01-02 15:04:05"),
+        ),
+        make([]interface{}, 0),
+    )
+    if err != nil {
+        return true, err
+    }
+
+    return false, err
 }
 
 func getMigrationsDone() (*MigrationRecord, error) {

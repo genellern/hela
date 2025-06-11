@@ -4,6 +4,7 @@ import (
     "database/sql"
     "fmt"
     _ "github.com/go-sql-driver/mysql"
+    "sort"
     "strings"
 )
 
@@ -70,15 +71,29 @@ func (m *MigrationOptions) New(table string, fields []string, action Action, ver
 }
 
 func (m *MigrationsStack) Migrate(localConnection ConnectionInterface) error {
-    connection = localConnection
+
+    var migrations []MigrationOptions
     var err error
+    connection = localConnection
+
+    // Extract migrations
     for _, callback := range *m {
-        options := callback()
-        err = processMigration(options)
+        migrations = append(migrations, callback())
+    }
+
+    // Sort migrations
+    sort.Slice(migrations, func(i, j int) bool {
+        return migrations[i].Version < migrations[j].Version
+    })
+
+    // Run migrations
+    for _, migration := range migrations {
+        err = processMigration(migration)
 
         if err != nil {
             return err
         }
+
     }
 
     return nil

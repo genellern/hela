@@ -32,7 +32,8 @@ type Connection struct {
 type ConnectionInterface interface {
     Open() error
     Close() error
-    Query(queryStr string, args []interface{}) (sql.Result, error)
+    Query(queryStr string, args []interface{}) (*sql.Rows, error)
+    Exec(queryStr string, args ...any) (sql.Result, error)
 }
 
 type Config struct {
@@ -193,7 +194,13 @@ func (c *Connection) Close() error {
     return c.conn.Close()
 }
 
-func (c *Connection) Query(queryStr string, args []interface{}) (sql.Result, error) {
+func (c *Connection) Exec(queryStr string, args ...any) (sql.Result, error) {
     fmt.Println("Query> " + queryStr)
-    return c.conn.Exec(queryStr, args...)
+    return c.conn.Exec(queryStr, args)
+}
+
+func (c *Connection) Query(queryStr string, args []interface{}) (*sql.Rows, error) {
+    fmt.Println("Query> " + queryStr)
+    return c.conn.Query(queryStr, args...)
+}
 }

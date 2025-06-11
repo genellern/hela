@@ -2,10 +2,12 @@ package migrator
 
 import (
     "database/sql"
+    "errors"
     "fmt"
+    "github.com/genellern/hela/cmd/utils"
     _ "github.com/go-sql-driver/mysql"
-    "sort"
     "strings"
+    "time"
 )
 
 type Action string
@@ -61,6 +63,12 @@ type MigrationInterface interface {
     TableName() string
 }
 
+type MigrationRecord struct {
+    name        string
+    version     int
+    migrated_on time.Time
+}
+
 //
 func (m *MigrationOptions) New(table string, fields []string, action Action, version int) *MigrationOptions {
     m.Table = table
@@ -72,20 +80,20 @@ func (m *MigrationOptions) New(table string, fields []string, action Action, ver
 }
 
 func (m *MigrationsStack) Migrate(localConnection ConnectionInterface) error {
-
     var migrations []MigrationOptions
     var err error
     connection = localConnection
+    latestMigration, err := getMigrationsDone()
+    if err != nil {
+        return err
+    }
 
     // Extract migrations
     for _, callback := range *m {
         migrations = append(migrations, callback())
     }
 
-    // Sort migrations
-    sort.Slice(migrations, func(i, j int) bool {
-        return migrations[i].Version < migrations[j].Version
-    })
+    migrations = filterOutDoneMigrations(migrations, &latestMigration)
 
     // Run migrations
     for _, migration := range migrations {
@@ -94,7 +102,6 @@ func (m *MigrationsStack) Migrate(localConnection ConnectionInterface) error {
         if err != nil {
             return err
         }
-
     }
 
     return nil
@@ -113,6 +120,18 @@ func (f fields) ddl() []string {
     }
 
     return ddl
+}
+
+func filterOutDoneMigrations(migrations []MigrationOptions, latestMigration **MigrationRecord) []MigrationOptions {
+    if (*latestMigration) == nil {
+        return migrations
+    }
+
+    migrations = utils.Filter(migrations, func(migration MigrationOptions) bool {
+        return migration.Version > (*latestMigration).version
+    })
+
+    return migrations
 }
 
 func processMigration(options MigrationOptions) error {
@@ -203,4 +222,41 @@ func (c *Connection) Query(queryStr string, args []interface{}) (*sql.Rows, erro
     fmt.Println("Query> " + queryStr)
     return c.conn.Query(queryStr, args...)
 }
+
+func getMigrationsDone() (*MigrationRecord, error) {
+    var migration *MigrationRecord = nil
+
+    // Check if migrations table already exists
+    result, err := connection.Query("show tables", make([]interface{}, 0))
+    defer result.Close()
+
+    var tables []string
+    for result.Next() {
+        var val string
+        if err := result.Scan(&val); err != nil {
+            return migration, err
+        }
+        tables = append(tables, val)
+    }
+    var migrationsExist bool = utils.Contains(tables, "migrations")
+
+    if !migrationsExist {
+        return nil, nil
+    } else {
+        migrationResults, _ := connection.Query("SELECT migration_name, version, migrated_on "+
+            "FROM migrations ORDER BY version "+
+            "LIMIT 1",
+            []interface{}{},
+        )
+        defer migrationResults.Close()
+
+        for migrationResults.Next() {
+            err = migrationResults.Scan(&migration.name, &migration.version, &migration.migrated_on)
+            if err != nil {
+                return migration, err
+            }
+        }
+    }
+
+    return migration, nil
 }

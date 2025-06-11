@@ -15,3 +15,13 @@ func ToSnakeCase(str string) string {
     // Convert the entire string to lowercase
     return strings.ToLower(str)
 }
+
+func Contains[T comparable](slice []T, value T) bool {
+    for _, v := range slice {
+        if v == value {
+            return true
+        }
+    }
+
+    return false
+}

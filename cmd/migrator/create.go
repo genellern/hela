@@ -33,7 +33,7 @@ func CreateMigration(config Config, args []string) error {
 func createMigrationFile(config Config, name string) (*os.File, error) {
 
     file, err := os.Create(fmt.Sprintf(
-        "%s/%d_%s.go",
+        time.Now().Format("2006_01_02_15_04_05")+".go",
         config.DestinationPath,
         time.Now().Unix(),
         name,
@@ -52,6 +52,7 @@ func parseTemplate(config Config, file *os.File, name string, args []string) err
     }
     var data MigrationOptions
     data.Table = name
+    data.Name = string(Create) + "_" + name
     data.PackageName = "migrations"
     data.Fields = args
     data.Action = Create
@@ -65,5 +66,4 @@ func parseTemplate(config Config, file *os.File, name string, args []string) err
 
     println("Created migration file >> ", filepath.Base(file.Name()))
     return nil
-
 }

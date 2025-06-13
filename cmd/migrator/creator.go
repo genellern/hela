@@ -50,7 +50,7 @@ func parseTemplate(config Config, file *os.File, name string, args []string) err
     if err != nil {
         return err
     }
-    var data MigrationOptions
+    var data Migration
     data.Table = name
     data.Name = string(Create) + "_" + name
     data.PackageName = "migrations"

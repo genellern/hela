@@ -2,8 +2,8 @@ package migrations
 
 import "github.com/genellern/hela/cmd/migrator"
 
-func (m *Migration) Migration_0000_InitMigrationsTable() migrator.MigrationOptions {
-    return migrator.MigrationOptions{
+func (m *Migration) Migration_0000_InitMigrationsTable() migrator.Migration {
+    return migrator.Migration{
         Version:     0,
         Table:       "migrations",
         PackageName: "migrations",

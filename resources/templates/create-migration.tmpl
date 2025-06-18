@@ -2,15 +2,18 @@ package {{ .PackageName }}
 
 import("github.com/genellern/hela/cmd/migrator")
 
-func Run() migrator.MigrationInterface {
-    var migration migrator.MigrationOptions
+func  (m *Migration) Migration_{{ .Name }}() migrator.Migration {
+    var migration migrator.Migration
 
-    migration.Table = "{{ .Table() }}"
+    migration.Version = {{ .Version }}
+    migration.Table = "{{ .Table }}"
+    migration.Name = "{{ .Name }}"
+    migration.Action = "{{ .Action }}"
     migration.PackageName = "{{ .PackageName }}"
 
-    {{ range .Fields }}
-    migration.Fields = append("{{ . }}", migration.fields)
-    {{ end }}
+{{ range .Fields }}
+    migration.Fields = append(migration.Fields, "{{ . }}")
+{{ end }}
 
     return migration
 }

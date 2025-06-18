@@ -47,17 +47,20 @@ func (d *MysqlDialect) ProcessDDL(ddl string) string {
 }
 
 func (d *MysqlDialect) GetLatestMigration() (*MigrationRecord, error) {
-    var migration *MigrationRecord = nil
+    var migration = &MigrationRecord{}
 
     // Check if migrations table already exists
-    result, err := d.connection.Query("show tables", make([]interface{}, 0))
+    result, err := d.connection.Query("show tables")
     defer result.Close()
+    if err != nil {
+        return nil, err
+    }
 
     var tables []string
     for result.Next() {
         var val string
         if err := result.Scan(&val); err != nil {
-            return migration, err
+            return nil, err
         }
         tables = append(tables, val)
     }
@@ -66,12 +69,15 @@ func (d *MysqlDialect) GetLatestMigration() (*MigrationRecord, error) {
     if !migrationsExist {
         return nil, nil
     } else {
-        migrationResults, _ := d.connection.Query("SELECT migration_name, version, migrated_on "+
-            "FROM migrations ORDER BY version "+
+        migrationResults, err := d.connection.Query("SELECT migration_name, migration_version, migrated_on " +
+            "FROM migrations ORDER BY migration_version DESC " +
             "LIMIT 1",
-            []interface{}{},
         )
         defer migrationResults.Close()
+
+        if err != nil {
+            return nil, err
+        }
 
         for migrationResults.Next() {
             err = migrationResults.Scan(&migration.Name, &migration.Version, &migration.MigratedOn)
@@ -92,22 +98,21 @@ func (dialect *MysqlDialect) CreateTable(tableName string, rawQuery string, fiel
             ")", tableName, strings.Join(fields.Ddl(), ",\n"))
     }
 
-    _, err = dialect.connection.Query(rawQuery, []interface{}{})
+    _, err = dialect.connection.Query(rawQuery)
     return err
 }
 
 func (dialect *MysqlDialect) MarkDone(migration *Migration) (bool, error) {
     _, err := dialect.connection.Exec(
-        fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES"+"(?, ?, ?)",
+        fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES "+"('%s', %d, '%s')",
             "migrations",
             "migration_name",
-            "version",
-            "migration_on",
+            "migration_version",
+            "migrated_on",
             migration.Name,
             migration.Version,
             time.Now().Format("2006-01-02 15:04:05"),
         ),
-        make([]interface{}, 0),
     )
 
     return err == nil, err

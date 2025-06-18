@@ -14,7 +14,7 @@ connection := &migrator.Connection{
     DSN: "developer:secret@tcp(127.0.0.1:3306)/mydb?parseTime=true",
 }
 
-$config.DestinationPath = "/home/gene/GolandProjects/myapp/database/migrations"
+config.DestinationPath = "/home/gene/GolandProjects/myapp/database/migrations"
 
 err := migrator.InitMigrations(config)
 ```
@@ -93,4 +93,10 @@ defer func(Conn migrator.Connection) {
         panic(err)
     }
 }(config.Conn)
+```
+
+> **Warning:**  Make sure you add the correct version, it can be shared among migrations, but it must always be higher 
+> than the latest recorded migration, otherwise it might be excluded
+```
+        Version:     2,
 ```

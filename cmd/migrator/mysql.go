@@ -73,11 +73,11 @@ func (d *MysqlDialect) GetLatestMigration() (*MigrationRecord, error) {
             "FROM migrations ORDER BY migration_version DESC " +
             "LIMIT 1",
         )
+        defer migrationResults.Close()
+
         if err != nil {
             return nil, err
         }
-
-        defer migrationResults.Close()
 
         for migrationResults.Next() {
             err = migrationResults.Scan(&migration.Name, &migration.Version, &migration.MigratedOn)

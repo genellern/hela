@@ -37,7 +37,7 @@ type Migration struct {
     Raw         string
 }
 
-func (migration Migration) processMigration(connection Connection) error {
+func (migration Migration) processMigration(connection *Connection) error {
     var fields MigrationFields
     var err error
     if migration.Raw != "" {
@@ -75,7 +75,6 @@ func (migration Migration) processMigration(connection Connection) error {
     }
 
     return err
-
 }
 
 type Migrations []Migration

@@ -2,7 +2,7 @@ package migrator
 
 import "github.com/genellern/hela/cmd/utils"
 
-func (m *MigrationCallbacksStack) Migrate(connection Connection) error {
+func (m *MigrationCallbacksStack) Migrate(connection *Connection) error {
     var migrations Migrations
     var err error
     latestMigration, err := connection.GetLatestMigration()
